@@ -101,7 +101,7 @@ func dialAssuan(path string) (conn net.Conn, err error) {
 }
 
 func handleGPGRequest(conn net.Conn) {
-	assuanPath := filepath.Join(os.Getenv("AppData"), "gnupg", "S.gpg-agent")
+	assuanPath := filepath.Join(os.Getenv("AppData"), "gnupg", "S.gpg-agent.extra")
 	assuanConn, err := dialAssuan(assuanPath)
 	if err != nil {
 		fmt.Println("Error connecting to assuan socket:", err.Error())
