@@ -12,7 +12,7 @@ import (
 type dialServer = func() (net.Conn, error)
 
 func createListener(name string) (net.Listener, error) {
-	filePath := filepath.Join(common.GetHomeDir(), ".gnupg", name)
+	filePath := filepath.Join("/run/user/1000/gnupg", name)
 	os.Remove(filePath)
 	return net.Listen("unix", filePath)
 }
