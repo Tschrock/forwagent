@@ -8,6 +8,12 @@ tested on Ubuntu, but might work on other distros.
 
 NOTE: This project should be considered experimental, and is provided as-is.
 
+## Building
+* Install Go (https://golang.org/dl/)
+* For the server, run `go get github.com/Tschrock/forwagent/forwagent-server`
+* For the client, run `go get github.com/Tschrock/forwagent/forwagent`
+* The built files will be in `$HOME/go/bin`
+
 ## Quick setup
 Both client and server need to have GnuPG installed, and their versions must be
 close to ensure compatbility of the gpg-agent protocol.
@@ -36,11 +42,13 @@ but this can be configured by providing an IP:PORT string as an argument to the
 executable.
 
 When the client is run, two unix domain socket files are created in
-`~/.gnupg/`, named `S.gpg-agent` and `S.gpg-agent.ssh`. These can be used by
-`gpg` and `ssh`, and will be tunneled to the sockets on the server. You'll need
-to configure SSH to use the socket:
+`/run/user/1000/gnupg/`, named `S.gpg-agent` and `S.gpg-agent.ssh`. These can
+be used by `gpg` and `ssh`, and will be tunneled to the sockets on the server.
+You'll need to configure SSH to use the socket:
 
-  $ export SSH_AUTH_SOCK="$HOME/.gnupg/S.gpg-agent.ssh"
+```sh
+$ export SSH_AUTH_SOCK="/run/user/1000/gnupg/S.gpg-agent.ssh"
+```
 
 You'll most likely want to automate the startup of the client so that it runs
 each time the computer starts. See the files in `doc/` for suggestions on how
@@ -59,6 +67,19 @@ In the clients `.forwagent` directory, create a file named `servers.allowed`
 and paste the servers public key. To allow connecting to multiple servers
 (though not more than one at a time), add multiple keys, one per line.
 
+### Forwarding over SSH
+You can use a reverse tunnel to connect over an ssh connection:
+
+```sh
+ssh -R 4711:127.0.0.1:4711
+```
+
+This can also be set up in your ssh config:
+```
+Host yourserver
+    RemoteForward 4711 127.0.0.1:4711
+```
+
 ### Usage
 Once set up, you should be able to run `gpg` commands on the client machine,
 and private keys from the server should be used. Note that the client
@@ -68,13 +89,14 @@ to add your public key to it.
 You should also be able to list your GPG authentication key under SSH by
 running:
 
-  $ ssh-add -L
+```sh
+$ ssh-add -L
+```
 
 And the `ssh` command should pick it up and use it automatically.
 
 NOTE: If gpg requires a PIN or passphrase for any action, this will be prompted
 for on the server, not the client.
-
 
 ## Listening on a different interface
 By default the loopback interface is used, which works fine for WSL, but may
