@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"flag"
 	"fmt"
-	"github.com/dainnilsson/forwagent/common"
-	"github.com/go-noisesocket/noisesocket"
 	"net"
 	"os"
+	"path/filepath"
+
+	"github.com/dainnilsson/forwagent/common"
+	"github.com/go-noisesocket/noisesocket"
 )
 
 func verifyCallback(publicKey []byte, data []byte) error {
@@ -26,7 +29,7 @@ func verifyCallback(publicKey []byte, data []byte) error {
 	fmt.Println("Unknown server key:", publicB64)
 	fmt.Println("To allow:")
 	fmt.Println("\necho '" + publicB64 + "' >> ~/.forwagent/servers.allowed\n")
-	return errors.New("Connection closed, unknown public key.")
+	return errors.New("connection closed, unknown public key")
 }
 
 func main() {
@@ -37,14 +40,13 @@ func main() {
 	}
 
 	var host string
-	if len(os.Args) > 2 {
-		fmt.Println("Invalid command line usage!")
-		os.Exit(1)
-	} else if len(os.Args) == 2 {
-		host = os.Args[1]
-	} else {
-		host = "127.0.0.1:4711"
-	}
+	var gpgSocket string
+	var sshSocket string
+	flag.StringVar(&host, "host", "127.0.0.1:4711", "The host to connect to.")
+	flag.StringVar(&gpgSocket, "gpgsocket", filepath.Join(common.GetHomeDir(), ".gnupg", "S.gpg-agent"), "The gpg socket location.")
+	flag.StringVar(&sshSocket, "sshsocket", filepath.Join(common.GetHomeDir(), ".gnupg", "S.gpg-agent.ssh"), "The ssh socket location.")
+	flag.Parse()
+
 	fmt.Println("Using server:", host)
 	fmt.Println("Client key:", base64.StdEncoding.EncodeToString(keys.Public))
 
@@ -53,7 +55,7 @@ func main() {
 		VerifyCallback: verifyCallback,
 	}
 
-	err = runClient(func() (net.Conn, error) {
+	err = runClient(gpgSocket, sshSocket, func() (net.Conn, error) {
 		return noisesocket.Dial(host, &config)
 	})
 	if err != nil {

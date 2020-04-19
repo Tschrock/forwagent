@@ -2,19 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/dainnilsson/forwagent/common"
 	"io"
 	"net"
 	"os"
-	"path/filepath"
+	"time"
+
+	"github.com/dainnilsson/forwagent/common"
 )
 
 type dialServer = func() (net.Conn, error)
 
 func createListener(name string) (net.Listener, error) {
-	filePath := filepath.Join("/run/user/1000/gnupg", name)
-	os.Remove(filePath)
-	return net.Listen("unix", filePath)
+	os.Remove(name)
+	time.Sleep(100 * time.Millisecond)
+	return net.Listen("unix", name)
 }
 
 func handleConnections(listener net.Listener, kind string, dial dialServer) {
@@ -44,12 +45,12 @@ func handleConnection(dial dialServer, conn net.Conn, connType string) {
 	common.ProxyConnections(conn, serverConn)
 }
 
-func runClient(dial dialServer) error {
-	gpgSocket, err := createListener("S.gpg-agent")
+func runClient(gpgSocketPath string, sshSocketPath string, dial dialServer) error {
+	gpgSocket, err := createListener(gpgSocketPath)
 	if err != nil {
 		return err
 	}
-	sshSocket, err := createListener("S.gpg-agent.ssh")
+	sshSocket, err := createListener(sshSocketPath)
 	if err != nil {
 		return err
 	}
