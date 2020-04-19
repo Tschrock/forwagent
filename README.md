@@ -42,12 +42,12 @@ but this can be configured by providing an IP:PORT string as an argument to the
 executable.
 
 When the client is run, two unix domain socket files are created in
-`/run/user/1000/gnupg/`, named `S.gpg-agent` and `S.gpg-agent.ssh`. These can
+`~/.gnupg/`, named `S.gpg-agent` and `S.gpg-agent.ssh`. These can
 be used by `gpg` and `ssh`, and will be tunneled to the sockets on the server.
 You'll need to configure SSH to use the socket:
 
 ```sh
-$ export SSH_AUTH_SOCK="/run/user/1000/gnupg/S.gpg-agent.ssh"
+$ export SSH_AUTH_SOCK="~/.gnupg/S.gpg-agent.ssh"
 ```
 
 You'll most likely want to automate the startup of the client so that it runs
@@ -79,6 +79,48 @@ This can also be set up in your ssh config:
 Host yourserver
     RemoteForward 4711 127.0.0.1:4711
 ```
+
+### Getting gpg to use the right socket
+Unfortunately, gpg is hardcoded to use `/run/user/$UID/gnupg/S.gpg-agent` for
+the gpg-agent socket. Fortunately, we can place a text file there to redirect
+it somewhere else.
+
+Example `/run/user/$UID/gnupg/S.gpg-agent` file:
+
+```
+%Assuan%
+socket=${HOME}/.gnupg/S.gpg-agent
+```
+
+This redirects the gpg-agent socket to `~/.gnupg/S.gpg-agent`, which is what
+`forwagent` uses by default.
+
+You can also get a bit fancy with this and set up an environmet variable to
+easily switch between a local and remote ssh agent:
+
+```
+%Assuan%
+socket=${HOME}/.gnupg/S.gpg-agent${GPG_SOCKET_SUFFIX}
+```
+
+```sh
+$ gpg ... # connects to local agent socket
+$ GPG_SOCKET_SUFFIX=.remote gpg ... # connects to remote agent socket
+```
+
+Here's a small addition to your `.profile` that automatically starts the client
+and sets the environment variable whenever you connect over ssh:
+```sh
+# If we're connection over ssh, set up forwagent for gpg forwarding
+if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+    # Make sure forwagent is running
+    pidof -q forwagent || forwagent -gpgsocket "$HOME/.gnupg/S.gpg-agent.remote" -sshsocket "$HOME/.gnupg/S.gpg-agent.ssh.remote" > /dev/null &
+    # Set the gpg socket suffix
+    export GPG_SOCKET_SUFFIX=".remote"
+    export SSH_AUTH_SOCK="~/.gnupg/S.gpg-agent.ssh.remote"
+fi
+```
+
 
 ### Usage
 Once set up, you should be able to run `gpg` commands on the client machine,
