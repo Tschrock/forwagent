@@ -1,0 +1,10 @@
+[Unit]
+Description=GPG Agent Forwarding Service
+
+[Service]
+Type=simple
+StandardOutput=journal
+ExecStart=forwagent-auto.sh
+
+[Install]
+WantedBy=default.target
